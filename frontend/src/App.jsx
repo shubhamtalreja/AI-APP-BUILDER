@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./App.css";
 
 export default function App() {
   const [messages, setMessages] = useState([
@@ -15,7 +16,14 @@ export default function App() {
     setMessages((prev) => [
       ...prev,
       { role: "user", content: userPrompt },
-      { role: "assistant", content: "Thinking..." }
+      {
+        role: "assistant", content: (
+          <div className="flex items-center gap-2">
+            <span className="font-bold">Thinking</span>
+            <div className="loader" />
+          </div>
+        )
+      }
     ]);
 
     setInput("");
@@ -29,12 +37,13 @@ export default function App() {
       });
 
       const data = await res.json();
+      console.log(data);
 
       setMessages((prev) => [
         ...prev.slice(0, -1), // remove "Thinking..."
         {
           role: "assistant",
-          content: "✅ App generated successfully!"
+          content: data.response
         },
         {
           role: "assistant",

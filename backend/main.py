@@ -3,17 +3,14 @@ import uuid
 import os
 from fastapi import FastAPI
 from pydantic import BaseModel
-from llm import chain
+from llm import intent_chain, app_chain
 from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173"
-    ],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,17 +27,28 @@ class GenerateRequest(BaseModel):
 @app.post("/generate")
 async def generate_app(data: GenerateRequest):
     # NEW LangChain invocation
-    response = await chain.ainvoke({"prompt": data.prompt})
+    intent_response = await intent_chain.ainvoke({"prompt": data.prompt})
+    intent_data = json.loads(intent_response.content)
+    intent = intent_data["intent"]
 
-    # AIMessage -> string
-    result = response.content
+    if intent == "GENERAL_QUERY":
+        return {"type": "text", "response": intent_data.get("message", "")}
 
-    # Parse JSON safely
-    project = json.loads(result)
+    if intent == "CLARIFY":
+        return {
+            "type": "clarify",
+            "response": intent_data.get(
+                "message",
+                "Could you tell me a bit more about what you want?"
+            ),
+        }
+
+
+    app_response = await app_chain.ainvoke({"prompt": data.prompt})
+    project = json.loads(app_response.content)
 
     project_id = str(uuid.uuid4())[:8]
     project_path = os.path.join(PROJECT_ROOT, project_id)
-
     os.makedirs(project_path, exist_ok=True)
 
     for file, content in project["files"].items():
@@ -49,7 +57,4 @@ async def generate_app(data: GenerateRequest):
         with open(full_path, "w", encoding="utf-8") as f:
             f.write(content)
 
-    return {
-        "projectId": project_id,
-        "files": project["files"]
-    }
+    return {"response":"App created successfully","type": "app", "projectId": project_id, "files": project["files"]}

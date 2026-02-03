@@ -10,9 +10,15 @@ llm = ChatOpenAI(
     max_tokens=1200,
 )
 
+with open("prompts/intent_classifier.txt", encoding="utf-8") as f:
+    intent_template = f.read()
+
+intent_prompt = ChatPromptTemplate.from_template(intent_template)
+intent_chain = intent_prompt | llm
+
 with open("prompts/react_app.txt", encoding="utf-8") as f:
-    template = f.read()
+    app_template = f.read()
 
-prompt = ChatPromptTemplate.from_template(template)
+app_prompt = ChatPromptTemplate.from_template(app_template)
 
-chain = prompt | llm
+app_chain = app_prompt | llm
