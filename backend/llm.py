@@ -8,6 +8,7 @@ llm = ChatOpenAI(
     model="gpt-4o-mini",
     temperature=0,
     max_tokens=1200,
+    streaming=True
 )
 
 with open("prompts/intent_classifier.txt", encoding="utf-8") as f:
@@ -22,3 +23,9 @@ with open("prompts/react_app.txt", encoding="utf-8") as f:
 app_prompt = ChatPromptTemplate.from_template(app_template)
 
 app_chain = app_prompt | llm
+
+with open("prompts/chat.txt", encoding="utf-8") as f:
+    chat_template = f.read()
+
+chat_prompt = ChatPromptTemplate.from_template(chat_template)
+chat_chain = chat_prompt | llm

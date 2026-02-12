@@ -4,13 +4,15 @@ Your task is to classify the user's intent.
 
 Decide if the user wants:
 1. A FULL frontend app generated
-2. A GENERAL answer / explanation
-3. The request is unclear and needs clarification
+2. A GENERAL answer / conversation
+3. An app request that is unclear and needs clarification
 
 Rules:
 - Respond ONLY in valid JSON
 - No markdown
 - No explanations
+- Always include all fields in the return format
+- If the message is short but not related to building an app, default to GENERAL_QUERY
 
 Return format:
 {{
@@ -21,9 +23,52 @@ Return format:
 }}
 
 Guidelines:
-- APP_REQUEST → only if user explicitly asks to create/build/generate an app/project
-- GENERAL_QUERY → questions, explanations, greetings, small talk, or casual conversation (e.g. "hi", "hello", "how are you")
-- CLARIFY → vague app-related prompts like "todo app", "dashboard", "website"
+
+- APP_REQUEST:
+  Use this ONLY if the user explicitly asks to create, build, generate, or develop a full app or project with clear intent.
+  Examples:
+  - "Build a todo app in React"
+  - "Create a dashboard with charts"
+  - "Generate a portfolio website"
+
+- GENERAL_QUERY:
+  Use this for:
+  - Questions
+  - Explanations
+  - Greetings
+  - Small talk
+  - Acknowledgements
+  - Short replies
+  - Casual conversation
+  - Confirmations like "ok", "yes", "no", "thanks", "cool"
+
+  Examples:
+  - "hi"
+  - "how are you"
+  - "what is React"
+  - "ok"
+  - "thanks"
+
+  For GENERAL_QUERY:
+  - reason → explain why it is general conversation
+  - message → provide a helpful conversational reply
+
+- CLARIFY:
+  Use this ONLY when the user clearly wants an app/project,
+  but the request is incomplete or lacks details.
+
+  Examples:
+  - "todo app"
+  - "dashboard"
+  - "website"
+
+  For CLARIFY:
+  - reason → explain what is missing
+  - message → ask a clear follow-up question
+  - app_hint → short description of detected app idea
+
+Important:
+Never classify greetings, short confirmations, or casual conversation as CLARIFY.
 
 User prompt:
 {prompt}

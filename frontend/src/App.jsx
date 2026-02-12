@@ -2,69 +2,164 @@ import { useState } from "react";
 import "./App.css";
 
 export default function App() {
-  const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hi 👋 What do you want to build today?" }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // const sendMessage = async () => {
+  //   if (!input.trim() || loading) return;
+
+  //   const userPrompt = input;
+
+  //   setMessages((prev) => [
+  //     ...prev,
+  //     { role: "user", content: userPrompt },
+  //     {
+  //       role: "assistant", content: (
+  //         <div className="flex items-center gap-2">
+  //           <span className="font-bold">Thinking</span>
+  //           <div className="loader" />
+  //         </div>
+  //       )
+  //     }
+  //   ]);
+
+  //   setInput("");
+  //   setLoading(true);
+
+  //   try {
+  //     const res = await fetch("http://localhost:8000/generate", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ prompt: userPrompt })
+  //     });
+
+  //     const data = await res.json();
+  //     console.log(data);
+
+  //     setMessages((prev) => [
+  //       ...prev.slice(0, -1), // remove "Thinking..."
+  //       {
+  //         role: "assistant",
+  //         content: data.response
+  //       },
+  //       {
+  //         role: "assistant",
+  //         files: data.files
+  //       }
+  //     ]);
+  //   } catch (err) {
+  //     setMessages((prev) => [
+  //       ...prev.slice(0, -1),
+  //       { role: "assistant", content: "❌ Something went wrong." }
+  //     ]);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
   const sendMessage = async () => {
-    if (!input.trim() || loading) return;
+  if (!input.trim() || loading) return;
 
-    const userPrompt = input;
+  const userPrompt = input;
 
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", content: userPrompt },
-      {
-        role: "assistant", content: (
+  setMessages((prev) => [
+    ...prev,
+    { role: "user", content: userPrompt },
+    { role: "assistant", content: (
           <div className="flex items-center gap-2">
-            <span className="font-bold">Thinking</span>
             <div className="loader" />
           </div>
-        )
-      }
-    ]);
+        ) }
+  ]);
 
-    setInput("");
-    setLoading(true);
+  setInput("");
+  setLoading(true);
 
-    try {
-      const res = await fetch("http://localhost:8000/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userPrompt })
-      });
+  try {
+    const res = await fetch("http://localhost:8000/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: userPrompt })
+    });
 
-      const data = await res.json();
-      console.log(data);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder("utf-8");
 
-      setMessages((prev) => [
-        ...prev.slice(0, -1), // remove "Thinking..."
-        {
-          role: "assistant",
-          content: data.response
-        },
-        {
-          role: "assistant",
-          files: data.files
+    let fullMessage = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split("\n\n").filter(Boolean);
+
+      for (let line of lines) {
+        if (!line.startsWith("data: ")) continue;
+
+        const data = JSON.parse(line.replace("data: ", ""));
+
+        switch (data.event) {
+
+          case "intent":
+            console.log("Intent:", data.value);
+            break;
+
+          case "chunk":
+          case "msg":
+            fullMessage += data.content;
+
+            setMessages((prev) => [
+              ...prev.slice(0, -1),
+              { role: "assistant", content: fullMessage }
+            ]);
+            break;
+
+          case "progress":
+            setMessages((prev) => [
+              ...prev.slice(0, -1),
+              { role: "assistant", content: data.message }
+            ]);
+            break;
+
+          case "file_written":
+            console.log("Created:", data.file);
+            break;
+
+          case "app":
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                files: data.files
+              }
+            ]);
+            break;
+
+          case "done":
+            setLoading(false);
+            break;
+
+          default:
+            break;
         }
-      ]);
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev.slice(0, -1),
-        { role: "assistant", content: "❌ Something went wrong." }
-      ]);
-    } finally {
-      setLoading(false);
+      }
     }
-  };
+  } catch (err) {
+    setMessages((prev) => [
+      ...prev.slice(0, -1),
+      { role: "assistant", content: "❌ Something went wrong." }
+    ]);
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="h-screen flex bg-gray-100">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r hidden md:flex flex-col">
-        <div className="p-4 font-bold text-xl">APP BUILDER</div>
+        <div className="p-4 font-bold text-xl">AI BOT</div>
         <button className="m-4 p-2 rounded bg-black text-white">
           + New Chat
         </button>
@@ -76,8 +171,8 @@ export default function App() {
       {/* Chat Area */}
       <main className="flex-1 flex flex-col w-[calc(100vw-256px)]">
         {/* Header */}
-        <header className="h-14 bg-white border-b flex items-center px-4 font-semibold">
-          AI App Builder
+        <header className="h-14 bg-white border-b flex items-center px-4 font-bold justify-center">
+          Helper AI
         </header>
 
         {/* Messages */}
@@ -98,7 +193,7 @@ export default function App() {
 
               {/* Render generated files */}
               {msg.files && (
-                <div className="bg-white border rounded-xl p-4 max-w-3xl space-y-4">
+                <div className="bg-white border rounded-xl p-4 max-w-3xl space-y-4 text-left">
                   <h3 className="font-semibold text-sm text-gray-700">
                     Generated Files
                   </h3>
